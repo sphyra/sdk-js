@@ -1,0 +1,18 @@
+#!/bin/sh
+# Rejects AI co-author trailers before the commit is created.
+# Enable once per clone with:  git config core.hooksPath .githooks
+set -u
+
+msg_file="$1"
+
+if grep -iqE 'co-authored-by:.*(anthropic|cursor|claude|noreply@anthropic)' "$msg_file"; then
+  echo "commit-msg: AI co-author trailer detected. Remove it before committing." >&2
+  exit 1
+fi
+
+if grep -iqE 'generated with \[?claude' "$msg_file"; then
+  echo "commit-msg: AI 'Generated with' line detected. Remove it before committing." >&2
+  exit 1
+fi
+
+exit 0

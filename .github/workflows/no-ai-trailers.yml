@@ -1,0 +1,22 @@
+name: no-ai-trailers
+
+on: [push, pull_request]
+
+jobs:
+  no-ai-trailers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan commit range for AI co-author trailers
+        env:
+          BASE_REF: ${{ github.base_ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            git fetch --no-tags origin "$BASE_REF"
+            sh .githooks/no-ai-trailers.sh "origin/$BASE_REF..$HEAD_SHA"
+          else
+            sh .githooks/no-ai-trailers.sh
+          fi

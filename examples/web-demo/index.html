@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./style.css" />
+    <script src="./config.js"></script>
+  </head>
+  <body>
+    <div class="app-shell">
+      <nav class="sidebar-rail" aria-label="Map tools">
+        <a class="rail-brand" href="/" title="Sphyra">
+          <img src="/sphyra.svg" width="36" height="36" alt="Sphyra" />
+        </a>
+
+        <div class="preset-picker" role="radiogroup" aria-label="Map light preset">
+          <button type="button" class="preset-chip" data-preset="dawn" role="radio" aria-checked="false" title="Dawn">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/><path d="M12 8a4 4 0 100 8 4 4 0 000-8z"/><path d="M3 17h18"/></svg>
+          </button>
+          <button type="button" class="preset-chip active" data-preset="day" role="radio" aria-checked="true" title="Day">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2"/></svg>
+          </button>
+          <button type="button" class="preset-chip" data-preset="dusk" role="radio" aria-checked="false" title="Dusk">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 17h18"/><path d="M12 9a5 5 0 100 10 5 5 0 000-10z"/></svg>
+          </button>
+          <button type="button" class="preset-chip" data-preset="night" role="radio" aria-checked="false" title="Night">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M21 14.5A8.5 8.5 0 1111.5 5a6.5 6.5 0 109.5 9.5z"/></svg>
+          </button>
+        </div>
+
+        <div class="rail-tools">
+          <button type="button" class="rail-btn" data-tool="search" aria-label="Search">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="directions" aria-label="Directions">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19V5l14 7L5 19z"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="layers" aria-label="Layers">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 12l10 5 10-5M2 17l10 5 10-5"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="inspect" aria-label="Inspect">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/></svg>
+          </button>
+          <div class="rail-divider" role="separator"></div>
+          <button type="button" class="rail-btn" data-tool="isochrone" aria-label="Isochrone">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="matrix" aria-label="Matrix">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="match" aria-label="Map match">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 16c3-6 13-6 16 0"/><circle cx="7" cy="8" r="2"/><circle cx="17" cy="8" r="2"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="optimize" aria-label="Optimize">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7h10v10H7z"/><path d="M3 3h4v4M17 3h4v4M3 17h4v4M17 17h4v4"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="tilequery" aria-label="Tile query">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 100 20 10 10 0 000-20z"/><path d="M12 6v6l4 2"/></svg>
+          </button>
+          <button type="button" class="rail-btn" data-tool="static" aria-label="Static image">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="14" rx="2"/><circle cx="9" cy="10" r="2"/><path d="M4 16l4-4 3 3 5-6 4 5"/></svg>
+          </button>
+        </div>
+
+        <div class="rail-footer">
+          <button type="button" id="mode-toggle" class="rail-btn rail-btn-sm" title="Toggle 2D / 3D" aria-pressed="true" aria-label="3D view">
+            <span id="mode-label">3D</span>
+          </button>
+          <span id="health" class="health-dot" title="Stack health">●</span>
+        </div>
+      </nav>
+
+      <aside id="tool-panel" class="tool-panel" aria-label="Tool panel" aria-hidden="true">
+        <header class="tool-panel-header">
+          <h2 id="tool-panel-title">Inspect</h2>
+          <button type="button" id="tool-panel-close" class="icon-btn" aria-label="Close panel">
+            <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+          </button>
+        </header>
+        <div class="tool-panel-scroll">
+          <div id="panel-search" class="panel-section" hidden>
+            <p class="panel-hint">Search addresses and places across Armenia.</p>
+            <div id="geocoder-host" class="geocoder-host"></div>
+          </div>
+          <div id="panel-layers" class="panel-section" hidden>
+            <p class="panel-hint">Toggle map feature visibility and set label language.</p>
+            <div class="control-group">
+              <label class="field-label" for="lang-select">Language</label>
+              <select id="lang-select" class="field-select">
+                <option value="hy">hy — Հայերեն</option>
+                <option value="en">en — English</option>
+                <option value="ru">ru — Русский</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <span class="field-label">Map layers</span>
+              <div id="layer-toggles" class="layer-toggles"></div>
+            </div>
+          </div>
+          <div id="panel-inspect" class="panel-section active">
+            <p class="panel-hint">Click the map to reverse-geocode and inspect features under the cursor.</p>
+            <div id="panel-body"></div>
+            <ul id="results" class="results" hidden></ul>
+          </div>
+          <div id="panel-directions" class="panel-section" hidden>
+            <p class="panel-hint">Click the map to set start (A) then destination (B).</p>
+            <div id="directions-ctrl-host" class="directions-ctrl-host"></div>
+            <button type="button" id="run-directions" class="btn-primary">Run sample route</button>
+            <div class="service-result" id="directions-result"></div>
+          </div>
+          <div id="panel-matrix" class="panel-section" hidden>
+            <p class="panel-hint">Travel-time matrix between Yerevan landmarks.</p>
+            <button type="button" id="run-matrix" class="btn-primary">Run matrix</button>
+            <div class="service-result" id="matrix-grid"></div>
+          </div>
+          <div id="panel-isochrone" class="panel-section" hidden>
+            <p class="panel-hint">Reachability from Republic Square (5 / 10 / 15 min).</p>
+            <button type="button" id="run-isochrone" class="btn-primary">Run isochrone</button>
+            <div class="service-result" id="isochrone-result"></div>
+          </div>
+          <div id="panel-match" class="panel-section" hidden>
+            <p class="panel-hint">Map-match a noisy GPS trace to roads.</p>
+            <button type="button" id="run-match" class="btn-primary">Run map match</button>
+            <div class="service-result" id="match-result"></div>
+          </div>
+          <div id="panel-optimize" class="panel-section" hidden>
+            <p class="panel-hint">Reorder delivery stops for the shortest trip.</p>
+            <button type="button" id="run-optimize" class="btn-primary">Run optimize</button>
+            <div class="service-result" id="optimize-result"></div>
+          </div>
+          <div id="panel-tilequery" class="panel-section" hidden>
+            <p class="panel-hint">Click the map to query vector features at that point.</p>
+            <div class="service-result" id="tilequery-result">Select this tool, then click the map.</div>
+          </div>
+          <div id="panel-static" class="panel-section" hidden>
+            <p class="panel-hint">Render the current view as a static PNG.</p>
+            <button type="button" id="run-static-image" class="btn-primary">Render preview</button>
+            <img id="static-preview" alt="Static map preview" hidden />
+          </div>
+        </div>
+      </aside>
+
+      <main class="map-stage">
+        <div id="map"></div>
+        <div id="error" class="error" hidden></div>
+      </main>
+    </div>
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>

@@ -1,0 +1,27 @@
+node_modules
+.DS_Store
+.env
+.env.*
+dist
+build
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Editors / IDEs
+.idea/
+*.iml
+.fleet/
+.vscode/
+.history/
+
+# OS / tooling noise
+Thumbs.db
+*.swp
+
+# Local web demo override config (never commit a real key)
+examples/web-demo/config.js
+
+# Local web demo headless-test screenshots (generated, never committed)
+examples/web-demo/screenshots/
