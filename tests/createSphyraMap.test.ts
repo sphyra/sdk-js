@@ -9,6 +9,13 @@ const { mapInstance, MapCtor, handlers } = vi.hoisted(() => {
       handlers[ev] = cb;
     }),
     getLayer: vi.fn(() => ({})),
+    getStyle: vi.fn(() => ({
+      layers: [
+        { id: "places-label", type: "symbol", layout: { "text-field": ["get", "name"] } },
+        { id: "roads-label", type: "symbol", layout: { "text-field": ["get", "name"] } },
+        { id: "background", type: "background" },
+      ],
+    })),
     setLight: vi.fn(),
     setPaintProperty: vi.fn(),
     setLayoutProperty: vi.fn(),
@@ -218,5 +225,51 @@ describe("createSphyraMap", () => {
     handlers["sourcedata"]!();
 
     expect(onLoad).not.toHaveBeenCalled();
+  });
+
+  it("setLanguage rewrites every symbol layer text-field and does not re-fetch the style", async () => {
+    const client = makeClient();
+    const handle = await createSphyraMap("map", { client, language: "local" });
+    handlers["load"]!();
+    client.getMapStyle.mockClear();
+
+    expect(typeof handle.setLanguage).toBe("function");
+    handle.setLanguage("ka");
+
+    expect(client.getMapStyle).not.toHaveBeenCalled();
+    expect(mapInstance.setLayoutProperty).toHaveBeenCalledWith("places-label", "text-field", [
+      "coalesce",
+      ["get", "name:ka"],
+      ["get", "name"],
+    ]);
+    expect(mapInstance.setLayoutProperty).toHaveBeenCalledWith("roads-label", "text-field", [
+      "coalesce",
+      ["get", "name:ka"],
+      ["get", "name"],
+    ]);
+    expect(mapInstance.setLayoutProperty).not.toHaveBeenCalledWith(
+      "background",
+      "text-field",
+      expect.anything(),
+    );
+  });
+
+  it("setLanguage survives setPreset/setMode (no style re-fetch)", async () => {
+    const client = makeClient();
+    const handle = await createSphyraMap("map", { client });
+    handlers["load"]!();
+    handle.setLanguage("ru");
+    client.getMapStyle.mockClear();
+    mapInstance.setLayoutProperty.mockClear();
+
+    handle.setPreset("night");
+    handle.setMode("2d");
+
+    expect(client.getMapStyle).not.toHaveBeenCalled();
+    expect(mapInstance.setLayoutProperty).toHaveBeenCalledWith("places-label", "text-field", [
+      "coalesce",
+      ["get", "name:ru"],
+      ["get", "name"],
+    ]);
   });
 });
