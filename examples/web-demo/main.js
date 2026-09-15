@@ -460,7 +460,7 @@ async function init() {
     client,
     lang: langOf(),
     onError: showError,
-    placeholder: "Search places in Armenia…",
+    placeholder: "Search places…",
   };
 
   let handle;
