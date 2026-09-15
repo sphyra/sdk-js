@@ -72,6 +72,15 @@ export async function createSphyraMap(
   }
   apply3dGroundDepth(style);
 
+  const rtlPlugin = (style as { metadata?: Record<string, unknown> }).metadata?.["sphyra:rtlTextPlugin"];
+  if (typeof rtlPlugin === "string") {
+    try {
+      void maplibregl.setRTLTextPlugin(rtlPlugin, true);
+    } catch {
+      // MapLibre throws if the plugin was already registered in this JS realm.
+    }
+  }
+
   const base = client.baseUrl;
   const authHeaders = client.authHeaders();
   const userTransform = options.transformRequest;
@@ -95,6 +104,7 @@ export async function createSphyraMap(
     transformRequest,
     attributionControl: false,
     maplibreLogo: false,
+    localIdeographFontFamily: "sans-serif",
   });
 
   addSphyraLogoControl(map, {

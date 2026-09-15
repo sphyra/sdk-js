@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Shared spies for the mocked maplibre-gl Map. Defined via vi.hoisted so the
 // vi.mock factory (which vitest hoists to the top of the module) can reference them.
-const { mapInstance, MapCtor, handlers } = vi.hoisted(() => {
+const { mapInstance, MapCtor, setRTLTextPlugin, handlers } = vi.hoisted(() => {
   const handlers: Record<string, (e?: unknown) => void> = {};
   const mapInstance = {
     on: vi.fn((ev: string, cb: (e?: unknown) => void) => {
@@ -26,10 +26,11 @@ const { mapInstance, MapCtor, handlers } = vi.hoisted(() => {
     remove: vi.fn(),
   };
   const MapCtor = vi.fn(() => mapInstance);
-  return { mapInstance, MapCtor, handlers };
+  const setRTLTextPlugin = vi.fn();
+  return { mapInstance, MapCtor, setRTLTextPlugin, handlers };
 });
 
-vi.mock("maplibre-gl", () => ({ default: { Map: MapCtor } }));
+vi.mock("maplibre-gl", () => ({ default: { Map: MapCtor, setRTLTextPlugin } }));
 
 import { createSphyraMap } from "../src/map/createSphyraMap";
 import type { SphyraClient } from "../src/SphyraClient";
@@ -63,6 +64,8 @@ function fakeStyle() {
       },
       "sphyra:activePreset": "day",
       "sphyra:activeMode": "3d",
+      "sphyra:rtlTextPlugin": "http://127.0.0.1:4000/api/v1/rtl-text-plugin.js?sig=abc",
+      "sphyra:localIdeographFontFamily": "sans-serif",
     },
   };
 }
@@ -97,6 +100,11 @@ describe("createSphyraMap", () => {
     expect(arg["center"]).toEqual([44.5, 40.18]);
     expect(arg["zoom"]).toBe(12);
     expect(typeof arg["transformRequest"]).toBe("function");
+    expect(arg["localIdeographFontFamily"]).toBe("sans-serif");
+    expect(setRTLTextPlugin).toHaveBeenCalledWith(
+      "http://127.0.0.1:4000/api/v1/rtl-text-plugin.js?sig=abc",
+      true,
+    );
   });
 
   it("C2 — transformRequest signs unsigned API URLs and leaves signed/foreign URLs alone", async () => {

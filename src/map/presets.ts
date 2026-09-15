@@ -56,9 +56,12 @@ export interface MapLibreLike {
 
 /** Ground road stack — must render before fill-extrusion so buildings occlude roads/labels in 3D. */
 export const ROAD_GROUND_LAYER_IDS = [
+  "transit-line",
+  "roads-tunnel",
   "roads-casing",
   "roads-rim",
   "roads-line",
+  "roads-bridge",
   "roads-lanes",
   "roads-crosswalk-base",
   "roads-crosswalk",
@@ -68,6 +71,10 @@ export const ROAD_GROUND_LAYER_IDS = [
 
 /** POI badges, address numbers, and place names sit above extruded buildings. */
 export const LAYERS_ABOVE_BUILDINGS_3D = [
+  "infrastructure-line",
+  "infrastructure-point",
+  "street-furniture-circle",
+  "natural-peak",
   "pois-circle",
   "pois-icon",
   "pois-label",
