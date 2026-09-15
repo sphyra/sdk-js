@@ -76,7 +76,54 @@ const LAYER_GROUPS = [
   { id: "labels", label: "Address labels", layers: ["housenumbers-label"] },
 ];
 
-const langOf = () => /** @type {"hy"|"en"|"ru"} */ (langSelect.value || "hy");
+const langOf = () => langSelect.value || "local";
+const serviceLang = () => {
+  const lang = langOf();
+  return lang === "local" ? "hy" : lang;
+};
+
+/** Always offered in the Layers dropdown so labels can be tested without waiting on GIS stats. */
+const DEMO_LANGUAGES = [
+  { code: "local", label: "local — OSM name" },
+  { code: "hy", label: "hy — Armenian" },
+  { code: "en", label: "en — English" },
+  { code: "ru", label: "ru — Russian" },
+  { code: "ka", label: "ka — Georgian" },
+  { code: "fr", label: "fr — French" },
+  { code: "de", label: "de — German" },
+  { code: "ar", label: "ar — Arabic" },
+  { code: "fa", label: "fa — Persian" },
+  { code: "zh", label: "zh — Chinese" },
+  { code: "ja", label: "ja — Japanese" },
+];
+
+function languageLabel(code) {
+  return DEMO_LANGUAGES.find((entry) => entry.code === code)?.label ?? code;
+}
+
+function fillLanguageSelect(codes) {
+  const current = langSelect.value;
+  const seen = new Set();
+  const ordered = [];
+  for (const { code } of DEMO_LANGUAGES) {
+    if (seen.has(code)) continue;
+    seen.add(code);
+    ordered.push(code);
+  }
+  for (const code of codes) {
+    if (seen.has(code)) continue;
+    seen.add(code);
+    ordered.push(code);
+  }
+  langSelect.replaceChildren();
+  for (const code of ordered) {
+    const option = document.createElement("option");
+    option.value = code;
+    option.textContent = languageLabel(code);
+    langSelect.appendChild(option);
+  }
+  langSelect.value = ordered.includes(current) ? current : "local";
+}
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
 let activeService = "inspect";
@@ -117,7 +164,7 @@ function addressHtml(r) {
     ["country", r.country],
     ["lat,lon", `${r.lat.toFixed(5)}, ${r.lon.toFixed(5)}`],
   ].filter(([, v]) => v != null && v !== "");
-  return `<h3>Reverse geocode (${esc(langOf())})</h3><dl>${rows
+  return `<h3>Reverse geocode (${esc(serviceLang())})</h3><dl>${rows
     .map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`)
     .join("")}</dl>`;
 }
@@ -443,7 +490,7 @@ async function init() {
 
   const directionsOpts = {
     client,
-    language: langOf(),
+    language: serviceLang(),
     interactive: false,
     onError: showError,
     onRoute: (result) => {
@@ -458,7 +505,7 @@ async function init() {
   };
   const geocoderOpts = {
     client,
-    lang: langOf(),
+    lang: serviceLang(),
     onError: showError,
     placeholder: "Search places…",
   };
@@ -469,6 +516,7 @@ async function init() {
       client,
       preset: activePreset,
       mode: "3d",
+      language: langOf(),
       center: YEREVAN,
       zoom: DEFAULT_ZOOM,
       logoUrl: "/sphyra.svg",
@@ -534,9 +582,12 @@ async function init() {
     modeBtn.setAttribute("aria-pressed", String(mode === "3d"));
   });
 
+  fillLanguageSelect(handle.getLanguages());
+  handle.setLanguage(langOf());
   langSelect.addEventListener("change", () => {
-    directionsOpts.language = langOf();
-    geocoderOpts.lang = langOf();
+    handle.setLanguage(langOf());
+    directionsOpts.language = serviceLang();
+    geocoderOpts.lang = serviceLang();
   });
 
   map.on("mousemove", (e) => {
@@ -570,7 +621,7 @@ async function init() {
     panelBody.innerHTML = `<div>Reverse-geocoding…</div>${featuresHtml(features)}`;
     resultsEl.hidden = true;
     try {
-      const result = await client.reverseGeocode({ lat: e.lngLat.lat, lon: e.lngLat.lng, lang: langOf() });
+      const result = await client.reverseGeocode({ lat: e.lngLat.lat, lon: e.lngLat.lng, lang: serviceLang() });
       panelBody.innerHTML = addressHtml(result) + featuresHtml(features);
     } catch (err) {
       showError(err);
