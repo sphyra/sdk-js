@@ -2,13 +2,20 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // Shared spies for the mocked maplibre-gl Map. Defined via vi.hoisted so the
 // vi.mock factory (which vitest hoists to the top of the module) can reference them.
-const { mapInstance, MapCtor, handlers } = vi.hoisted(() => {
+const { mapInstance, MapCtor, setRTLTextPlugin, handlers } = vi.hoisted(() => {
   const handlers: Record<string, (e?: unknown) => void> = {};
   const mapInstance = {
     on: vi.fn((ev: string, cb: (e?: unknown) => void) => {
       handlers[ev] = cb;
     }),
     getLayer: vi.fn(() => ({})),
+    getStyle: vi.fn(() => ({
+      layers: [
+        { id: "places-label", type: "symbol", layout: { "text-field": ["get", "name"] } },
+        { id: "roads-label", type: "symbol", layout: { "text-field": ["get", "name"] } },
+        { id: "background", type: "background" },
+      ],
+    })),
     setLight: vi.fn(),
     setPaintProperty: vi.fn(),
     setLayoutProperty: vi.fn(),
@@ -19,10 +26,11 @@ const { mapInstance, MapCtor, handlers } = vi.hoisted(() => {
     remove: vi.fn(),
   };
   const MapCtor = vi.fn(() => mapInstance);
-  return { mapInstance, MapCtor, handlers };
+  const setRTLTextPlugin = vi.fn();
+  return { mapInstance, MapCtor, setRTLTextPlugin, handlers };
 });
 
-vi.mock("maplibre-gl", () => ({ default: { Map: MapCtor } }));
+vi.mock("maplibre-gl", () => ({ default: { Map: MapCtor, setRTLTextPlugin } }));
 
 import { createSphyraMap } from "../src/map/createSphyraMap";
 import type { SphyraClient } from "../src/SphyraClient";
@@ -56,6 +64,8 @@ function fakeStyle() {
       },
       "sphyra:activePreset": "day",
       "sphyra:activeMode": "3d",
+      "sphyra:rtlTextPlugin": "http://127.0.0.1:4000/api/v1/rtl-text-plugin.js?sig=abc",
+      "sphyra:localIdeographFontFamily": "sans-serif",
     },
   };
 }
@@ -90,6 +100,11 @@ describe("createSphyraMap", () => {
     expect(arg["center"]).toEqual([44.5, 40.18]);
     expect(arg["zoom"]).toBe(12);
     expect(typeof arg["transformRequest"]).toBe("function");
+    expect(arg["localIdeographFontFamily"]).toBe("sans-serif");
+    expect(setRTLTextPlugin).toHaveBeenCalledWith(
+      "http://127.0.0.1:4000/api/v1/rtl-text-plugin.js?sig=abc",
+      true,
+    );
   });
 
   it("C2 — transformRequest signs unsigned API URLs and leaves signed/foreign URLs alone", async () => {
@@ -218,5 +233,51 @@ describe("createSphyraMap", () => {
     handlers["sourcedata"]!();
 
     expect(onLoad).not.toHaveBeenCalled();
+  });
+
+  it("setLanguage rewrites every symbol layer text-field and does not re-fetch the style", async () => {
+    const client = makeClient();
+    const handle = await createSphyraMap("map", { client, language: "local" });
+    handlers["load"]!();
+    client.getMapStyle.mockClear();
+
+    expect(typeof handle.setLanguage).toBe("function");
+    handle.setLanguage("ka");
+
+    expect(client.getMapStyle).not.toHaveBeenCalled();
+    expect(mapInstance.setLayoutProperty).toHaveBeenCalledWith("places-label", "text-field", [
+      "coalesce",
+      ["get", "name:ka"],
+      ["get", "name"],
+    ]);
+    expect(mapInstance.setLayoutProperty).toHaveBeenCalledWith("roads-label", "text-field", [
+      "coalesce",
+      ["get", "name:ka"],
+      ["get", "name"],
+    ]);
+    expect(mapInstance.setLayoutProperty).not.toHaveBeenCalledWith(
+      "background",
+      "text-field",
+      expect.anything(),
+    );
+  });
+
+  it("setLanguage survives setPreset/setMode (no style re-fetch)", async () => {
+    const client = makeClient();
+    const handle = await createSphyraMap("map", { client });
+    handlers["load"]!();
+    handle.setLanguage("ru");
+    client.getMapStyle.mockClear();
+    mapInstance.setLayoutProperty.mockClear();
+
+    handle.setPreset("night");
+    handle.setMode("2d");
+
+    expect(client.getMapStyle).not.toHaveBeenCalled();
+    expect(mapInstance.setLayoutProperty).toHaveBeenCalledWith("places-label", "text-field", [
+      "coalesce",
+      ["get", "name:ru"],
+      ["get", "name"],
+    ]);
   });
 });

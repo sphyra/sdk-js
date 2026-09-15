@@ -10,6 +10,7 @@ import {
   pitchForMode,
 } from "./presets";
 import { addSphyraLogoControl } from "./sphyraLogoControl.js";
+import { applyLanguageToMap, languagesFromStyle, STYLE_LANGUAGE_DEFAULT } from "./language.js";
 
 export interface CreateSphyraMapOptions {
   client: SphyraClient;
@@ -33,12 +34,16 @@ export interface CreateSphyraMapOptions {
   logoSize?: number;
   onLoad?: (map: maplibregl.Map) => void;
   onError?: (err: unknown) => void;
+  /** Label language. Default `"local"` (OSM `name`). Switch later with `setLanguage` — no re-fetch. */
+  language?: string;
 }
 
 export interface SphyraMapHandle {
   map: maplibregl.Map;
   setPreset(preset: StylePreset): void;
   setMode(mode: StyleMode): void;
+  setLanguage(language: string): void;
+  getLanguages(): string[];
   destroy(): void;
 }
 
@@ -56,6 +61,7 @@ export async function createSphyraMap(
   const { client } = options;
   const preset = options.preset ?? DEFAULT_PRESET;
   const mode = options.mode ?? DEFAULT_MODE;
+  let activeLanguage = options.language ?? STYLE_LANGUAGE_DEFAULT;
 
   let style: SphyraStyle;
   try {
@@ -65,6 +71,15 @@ export async function createSphyraMap(
     throw err;
   }
   apply3dGroundDepth(style);
+
+  const rtlPlugin = (style as { metadata?: Record<string, unknown> }).metadata?.["sphyra:rtlTextPlugin"];
+  if (typeof rtlPlugin === "string") {
+    try {
+      void maplibregl.setRTLTextPlugin(rtlPlugin, true);
+    } catch {
+      // MapLibre throws if the plugin was already registered in this JS realm.
+    }
+  }
 
   const base = client.baseUrl;
   const authHeaders = client.authHeaders();
@@ -89,6 +104,7 @@ export async function createSphyraMap(
     transformRequest,
     attributionControl: false,
     maplibreLogo: false,
+    localIdeographFontFamily: "sans-serif",
   });
 
   addSphyraLogoControl(map, {
@@ -99,12 +115,20 @@ export async function createSphyraMap(
   let activePreset = preset;
   let activeMode = mode;
 
+  const applyLanguage = (): void => {
+    applyLanguageToMap(
+      map as unknown as Parameters<typeof applyLanguageToMap>[0],
+      activeLanguage,
+    );
+  };
+
   let ready = false;
   const fireReady = (): void => {
     if (ready) return;
     ready = true;
     applyPresetToMap(map as unknown as Parameters<typeof applyPresetToMap>[0], style, activePreset);
     applyModeToMap(map as unknown as Parameters<typeof applyModeToMap>[0], style, activeMode);
+    applyLanguage();
     options.onLoad?.(map);
   };
 
@@ -145,10 +169,19 @@ export async function createSphyraMap(
       applyPresetToMap(map as unknown as Parameters<typeof applyPresetToMap>[0], style, next);
       // Re-apply mode so flat footprints stay hidden in 3D after paint updates.
       applyModeToMap(map as unknown as Parameters<typeof applyModeToMap>[0], style, activeMode);
+      applyLanguage();
     },
     setMode(next) {
       activeMode = next;
       applyModeToMap(map as unknown as Parameters<typeof applyModeToMap>[0], style, next);
+      applyLanguage();
+    },
+    setLanguage(next) {
+      activeLanguage = next;
+      applyLanguage();
+    },
+    getLanguages() {
+      return languagesFromStyle(style);
     },
     destroy() {
       map.remove();

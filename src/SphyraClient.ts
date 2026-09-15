@@ -248,10 +248,11 @@ export class SphyraClient {
    * no re-fetch. `preset`/`mode` bake a server-side variant (for non-GL consumers); the SDK map
    * surfaces fetch once with no params and switch locally.
    */
-  getMapStyle(opts: { preset?: StylePreset; mode?: StyleMode } = {}): Promise<SphyraStyle> {
+  getMapStyle(opts: { preset?: StylePreset; mode?: StyleMode; language?: string } = {}): Promise<SphyraStyle> {
     const query = new URLSearchParams();
     if (opts.preset !== undefined) query.set("preset", opts.preset);
     if (opts.mode !== undefined) query.set("mode", opts.mode);
+    if (opts.language !== undefined) query.set("language", opts.language);
     const qs = query.toString();
     const suffix = qs ? `?${qs}` : "";
     return this.withRetry(() =>
