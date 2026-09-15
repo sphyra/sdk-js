@@ -63,13 +63,6 @@ Only `baseUrl` and `apiKey` change between local and production.
 pnpm add @sphyra/js maplibre-gl
 ```
 
-`@sphyra/js` is **not yet on npm**. Until publish, install from a path or git ref:
-
-```bash
-pnpm add file:../sdk-js maplibre-gl
-# or: pnpm add git+https://github.com/sphyra/sdk-js.git#main maplibre-gl
-```
-
 | Package | Role |
 |---------|------|
 | `maplibre-gl ^4.7.1` | **Required** peer — map rendering |
