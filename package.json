@@ -1,6 +1,6 @@
 {
   "name": "@sphyra/js",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Framework-agnostic JavaScript/TypeScript SDK for the Sphyra map & geocoding API",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -20,6 +20,17 @@
   "sideEffects": false,
   "license": "UNLICENSED",
   "private": false,
+  "publishConfig": {
+    "access": "public"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sphyra/sdk-js.git"
+  },
+  "homepage": "https://github.com/sphyra/sdk-js#readme",
+  "bugs": {
+    "url": "https://github.com/sphyra/sdk-js/issues"
+  },
   "scripts": {
     "build": "tsup",
     "test": "vitest run",
