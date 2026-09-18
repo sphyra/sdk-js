@@ -107,6 +107,16 @@ describe("createSphyraMap", () => {
     );
   });
 
+  it("C1b — tilts to 85 like Mapbox, so a user can drag the compass up into the sky", async () => {
+    await createSphyraMap("map", { client: makeClient() });
+    // MapLibre's own default is 60, which stops short of the horizon: no sky ever comes into view.
+    expect(ctorArgs()["maxPitch"]).toBe(85);
+
+    vi.clearAllMocks();
+    await createSphyraMap("map", { client: makeClient(), maxPitch: 70 });
+    expect(ctorArgs()["maxPitch"]).toBe(70);
+  });
+
   it("C2 — transformRequest signs unsigned API URLs and leaves signed/foreign URLs alone", async () => {
     const client = makeClient();
 

@@ -9,7 +9,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "noUncheckedIndexedAccess": true,
-    "types": ["node"],
+    "types": ["node", "geojson"],
     "outDir": "dist",
     "rootDir": "src"
   },

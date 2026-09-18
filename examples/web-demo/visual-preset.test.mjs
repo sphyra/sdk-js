@@ -54,25 +54,24 @@ for (const preset of ["dawn", "day", "dusk", "night"]) {
         const map = window.__SPHYRA_DEMO_MAP;
         const style = map.getStyle();
         const b3 = style.layers.find((l) => l.id === "buildings-3d");
-        const pc = style.layers.find((l) => l.id === "pois-circle");
+        const poiLayer = style.layers.find((l) => l.id === "pois");
         const bg = style.layers.find((l) => l.id === "background");
-        const pois = map.queryRenderedFeatures(undefined, { layers: ["pois-circle"] }).slice(0, 40);
+        const pois = map.queryRenderedFeatures(undefined, { layers: ["pois"] }).slice(0, 40);
         const colors = new Set(pois.map((f) => {
-          const cat = f.properties?.amenity || f.properties?.shop || f.properties?.tourism || "?";
+          const cat = f.properties?.rank_class || "?";
           return `${cat}`;
         }));
         return {
           buildingColor: b3?.paint?.["fill-extrusion-color"],
-          poiCirclePaint: pc?.paint?.["circle-color"],
+          poiIconImage: poiLayer?.layout?.["icon-image"],
           background: bg?.paint?.["background-color"],
           poiCategories: [...colors],
-          hasPoiIconLayer: Boolean(map.getLayer("pois-icon")),
+          hasPoiLayer: Boolean(map.getLayer("pois")),
         };
       }, preset);
 
-      assert.ok(info.hasPoiIconLayer, "pois-icon layer missing");
-      assert.notEqual(info.poiCirclePaint, "#4264fb", "POI circles must not be flat blue");
-      assert.ok(Array.isArray(info.poiCirclePaint) || typeof info.poiCirclePaint === "object", "POI color must be expression");
+      assert.ok(info.hasPoiLayer, "single ranked POI layer missing");
+      assert.equal(info.poiIconImage[0], "concat", "POI must use a baked rank-class badge");
 
       const b3Vis = await page.evaluate(() => {
         const map = window.__SPHYRA_DEMO_MAP;
@@ -80,10 +79,13 @@ for (const preset of ["dawn", "day", "dusk", "night"]) {
       });
       assert.equal(b3Vis, "visible", "buildings-3d must stay visible in 3D mode");
 
-      if (preset === "dawn") assert.equal(info.buildingColor, "#ebe4da");
-      if (preset === "day") assert.equal(info.buildingColor, "#f2ece4");
-      if (preset === "dusk") assert.equal(info.buildingColor, "#6a656e");
-      if (preset === "night") assert.equal(info.buildingColor, "#2a2a32");
+      // Facade colours are fitted to Mapbox pixels in the API (mapStyleFacades.test.ts); the demo only
+      // has to bake whatever the style's own preset table says.
+      const expected = await page.evaluate(
+        (p) => window.__SPHYRA_DEMO_MAP.getStyle().metadata["sphyra:presets"][p].layers["buildings-3d"]["fill-extrusion-color"],
+        preset,
+      );
+      assert.equal(info.buildingColor, expected);
     } finally {
       await browser.close();
     }

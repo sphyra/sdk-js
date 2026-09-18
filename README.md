@@ -65,7 +65,7 @@ pnpm add @sphyra/js maplibre-gl
 
 | Package | Role |
 |---------|------|
-| `maplibre-gl ^4.7.1` | **Required** peer — map rendering |
+| `maplibre-gl ^5.24.0` | **Required** peer — map rendering (5.x for the themed sky and the globe; see ADR-008) |
 | `@mapbox/mapbox-gl-draw ^1.4.3` | **Optional** peer — only for `createDrawControl()` |
 
 ## Quickstart
@@ -86,7 +86,7 @@ console.log(status); // "ok"
 <summary><strong>Browser — ESM</strong></summary>
 
 ```html
-<link href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" rel="stylesheet" />
+<link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
 <div id="map" style="width:100%;height:400px"></div>
 <script type="module">
   import { SphyraClient } from "./node_modules/@sphyra/js/dist/index.js";
@@ -104,7 +104,7 @@ console.log(status); // "ok"
 <summary><strong>Browser — UMD</strong></summary>
 
 ```html
-<link href="https://unpkg.com/maplibre-gl@4/dist/maplibre-gl.css" rel="stylesheet" />
+<link href="https://unpkg.com/maplibre-gl@5/dist/maplibre-gl.css" rel="stylesheet" />
 <script src="./node_modules/@sphyra/js/dist/index.umd.js"></script>
 <script>
   const client = new Sphyra.SphyraClient({
@@ -187,6 +187,38 @@ handle.destroy();
 ```
 
 Lower-level: `client.getTileConfig()` and `client.getMapStyle({ preset, mode })` if you wire MapLibre yourself. Most apps should use `createSphyraMap()`.
+
+### 1.2.0 — Mapbox Standard look
+
+The style this SDK renders was rebuilt for Mapbox Standard parity (`S-1.0.0-11-023`). What changed for
+consumers:
+
+- **New layer ids.** Buildings are now a stack — `buildings-ao`, `buildings-ao-contact` (ground
+  shadows), `buildings-3d` (walls) and `buildings-3d-roof` (roof-edge contour). If you toggle layers by id, use
+  `metadata["sphyra:layerGroups"]` instead of hard-coded lists.
+- **POIs draw above the buildings** so a building never covers the labels in front of it.
+  `apply3dGroundDepth()` / `apply3dGroundDepthToMap()` keep that order; call them after adding your own
+  layers if you insert into the middle of the stack.
+- **Preset colours look wrong in isolation and right on screen** — they are fitted through MapLibre's
+  extrusion lighting (see the `Map-Style-Standard` documentation page). Change them through the
+  preset table, not by editing layer paint.
+- **Zoom ranges match the tile server**: buildings and POIs come from z18 tiles and MapLibre
+  overzooms above. Asking for z19+ tiles used to 404 and buildings vanished while zooming.
+- Tiles are served gzipped and cacheable; a viewport is roughly half the bytes it was.
+- **`maplibre-gl` moves to `^5.24.0`** (peer). This is the breaking part of 1.2.0: the themed sky and
+  the globe do not exist before MapLibre 5. Upgrading is a version bump for most apps — v5 keeps the
+  default export and the API surface v4 had. (v6 removes the default export; the SDK does not support
+  it yet.)
+- **The camera tilts to 85°, not 60°.** MapLibre's default stopped short of the horizon, so no
+  amount of dragging the compass ever showed the sky. `createSphyraMap` now matches Mapbox Standard;
+  pass `maxPitch` to override.
+- **A sky, a globe and stars.** The style now carries a `sky` per preset and a `projection` that shows
+  a globe below z4 and mercator from z6, in both 2D and 3D. `createSphyraMap` paints the container
+  with `metadata["sphyra:spaceColor"]` (MapLibre leaves space around the globe transparent) and
+  `applyPresetToMap` adds the starfield — MapLibre draws no stars, so the SDK ships one as a custom
+  layer. If you build the map yourself instead of using `createSphyraMap`, call
+  `ensureStarfieldOnMap(map, style.metadata["sphyra:presets"][preset].stars)` and set the container
+  background yourself.
 
 ## Geocoding
 

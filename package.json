@@ -1,6 +1,7 @@
 {
   "name": "@sphyra/js",
-  "version": "1.1.0",
+  "version": "1.2.0",
+  "packageManager": "pnpm@10.33.0",
   "description": "Framework-agnostic JavaScript/TypeScript SDK for the Sphyra map & geocoding API",
   "type": "module",
   "main": "./dist/index.cjs",
@@ -37,16 +38,19 @@
     "typecheck": "tsc --noEmit"
   },
   "peerDependencies": {
-    "maplibre-gl": "^4.7.1",
-    "@mapbox/mapbox-gl-draw": "^1.4.3"
+    "@mapbox/mapbox-gl-draw": "^1.4.3",
+    "maplibre-gl": "^5.24.0"
   },
   "peerDependenciesMeta": {
-    "@mapbox/mapbox-gl-draw": { "optional": true }
+    "@mapbox/mapbox-gl-draw": {
+      "optional": true
+    }
   },
   "devDependencies": {
+    "@types/geojson": "^7946.0.16",
     "@types/node": "^24.0.0",
     "jsdom": "^29.1.1",
-    "maplibre-gl": "^4.7.1",
+    "maplibre-gl": "5.24.0",
     "tsup": "^8.3.0",
     "typescript": "^5.9.0",
     "vitest": "^2.1.5"

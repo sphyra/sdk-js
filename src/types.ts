@@ -364,22 +364,26 @@ export interface StaticImageUrlParams {
 export type SphyraStyle = Record<string, unknown>;
 
 export interface SphyraPresetLight {
-  anchor: "viewport";
+  anchor: "map" | "viewport";
   color: string;
   intensity: number;
   position?: [number, number, number];
 }
-export interface SphyraPresetFog {
-  color: string;
-  "horizon-blend": number;
-  range: [number, number];
-  "high-color": string;
-  "space-color": string;
-  "star-intensity"?: number;
+/** MapLibre `sky`: the gradient above the horizon and the globe's atmosphere (renderer >= 5.0). */
+export interface SphyraPresetSky {
+  "sky-color": string;
+  "horizon-color": string;
+  "fog-color": string;
+  "fog-ground-blend": number;
+  "horizon-fog-blend": number;
+  "sky-horizon-blend": number;
+  "atmosphere-blend": unknown;
 }
 export interface SphyraPresetDef {
   light: SphyraPresetLight;
-  fog?: SphyraPresetFog;
+  sky?: SphyraPresetSky;
+  /** Starfield strength for this preset (0 = none, 1 = full night sky). */
+  stars?: number;
   layers: Record<string, Record<string, unknown>>;
 }
 export interface SphyraModeDef {
