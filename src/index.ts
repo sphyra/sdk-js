@@ -84,6 +84,8 @@ export {
   STYLE_PRESETS,
   STYLE_MODES,
 } from "./map/presets";
+export { createStarfieldLayer, ensureStarfieldOnMap, STARFIELD_LAYER_ID } from "./map/starfield";
+export type { StarfieldLayer, StarfieldHost } from "./map/starfield";
 export { addMarker } from "./map/markers";
 export type { AddMarkerOptions, SphyraMarkerHandle } from "./map/markers";
 export { addPopup } from "./map/popups";

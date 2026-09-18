@@ -1,4 +1,5 @@
 import type { StyleMode, StylePreset, SphyraPresetDef, SphyraModeDef, SphyraStyle } from "../types";
+import { ensureStarfieldOnMap, type StarfieldHost } from "./starfield.js";
 
 export const STYLE_PRESETS: readonly StylePreset[] = ["dawn", "day", "dusk", "night"];
 export const STYLE_MODES: readonly StyleMode[] = ["2d", "3d"];
@@ -46,7 +47,9 @@ export function pitchForMode(style: SphyraStyle, mode: StyleMode): number {
 export interface MapLibreLike {
   getLayer(id: string): unknown;
   setLight(light: unknown): void;
-  setFog?(fog: unknown): void;
+  setSky?(sky: unknown): void;
+  addLayer?(layer: unknown, beforeId?: string): void;
+  getStyle?(): { layers?: { id: string }[] } | undefined | null;
   setPaintProperty(layerId: string, name: string, value: unknown): void;
   setLayoutProperty(layerId: string, name: string, value: unknown): void;
   setTerrain(terrain: unknown): void;
@@ -66,18 +69,27 @@ export const ROAD_GROUND_LAYER_IDS = [
   "roads-crosswalk-base",
   "roads-crosswalk",
   "roads-oneway",
-  "roads-label",
-] as const;
-
-/** POI badges, address numbers, and place names sit above extruded buildings. */
-export const LAYERS_ABOVE_BUILDINGS_3D = [
+  // Poles, lamps and power lines are ground ink too — above the extrusions they speckled roofs.
   "infrastructure-line",
   "infrastructure-point",
   "street-furniture-circle",
+  "roads-label",
+] as const;
+
+/** Drawn straight after the building stack so buildings never cover POI labels (API 11-023). */
+export const LAYERS_ON_BUILDINGS_3D = ["pois"] as const;
+
+/** Ground shadows · walls · roof cap (API 11-023), always drawn together in this order. */
+export const BUILDING_FACADE_LAYERS = [
+  "buildings-ao",
+  "buildings-ao-contact",
+  "buildings-3d",
+  "buildings-3d-roof",
+] as const;
+
+/** Address numbers and place names sit above extrusions. */
+export const LAYERS_ABOVE_BUILDINGS_3D = [
   "natural-peak",
-  "pois-circle",
-  "pois-icon",
-  "pois-label",
   "buildings-housenumber-label",
   "housenumbers-label",
   "landuse-label",
@@ -94,17 +106,24 @@ function extractLayer(
   return layers.splice(idx, 1)[0] ?? null;
 }
 
-/** Normalize: … → road stack → buildings-3d → POIs / housenumbers / place labels. */
+/** Normalize: … → road/POI ground stack → facade stack → housenumbers / place labels. */
 export function apply3dGroundDepth(style: SphyraStyle): void {
   const layers = (style["layers"] as { id: string; layout?: Record<string, unknown> }[] | undefined) ?? [];
-  const buildings3d = extractLayer(layers, "buildings-3d");
-  if (!buildings3d) return;
+  if (!layers.some((l) => l.id === "buildings-3d")) return;
+  const facade = BUILDING_FACADE_LAYERS.map((id) => extractLayer(layers, id)).filter(
+    (layer): layer is { id: string; layout?: Record<string, unknown> } => layer !== null,
+  );
+  const buildings3d = facade.find((l) => l.id === "buildings-3d")!;
 
   const roadLayers: { id: string; layout?: Record<string, unknown> }[] = [];
   for (const id of ROAD_GROUND_LAYER_IDS) {
     const layer = extractLayer(layers, id);
     if (layer) roadLayers.push(layer);
   }
+
+  const onBuildings = LAYERS_ON_BUILDINGS_3D.map((id) => extractLayer(layers, id)).filter(
+    (layer): layer is { id: string; layout?: Record<string, unknown> } => layer !== null,
+  );
 
   const roadsLabel = roadLayers.find((l) => l.id === "roads-label");
   if (roadsLabel?.layout) {
@@ -120,7 +139,7 @@ export function apply3dGroundDepth(style: SphyraStyle): void {
   );
   if (insertIdx < 0) insertIdx = layers.length;
 
-  layers.splice(insertIdx, 0, ...roadLayers, buildings3d);
+  layers.splice(insertIdx, 0, ...roadLayers, ...facade, ...onBuildings);
   enforceOpaqueBuildings3d(buildings3d);
 }
 
@@ -134,8 +153,9 @@ function enforceOpaqueBuildings3dOnMap(map: MapLibreLike): void {
   }
 }
 
-export function apply3dGroundDepthToMap(map: MapLibreLike & { getStyle?: () => { layers?: { id: string }[] } }): void {
+export function apply3dGroundDepthToMap(map: MapLibreLike): void {
   if (!map.getLayer("buildings-3d") || !map.moveLayer) return;
+  const moveLayer = map.moveLayer.bind(map);
 
   enforceOpaqueBuildings3dOnMap(map);
 
@@ -144,22 +164,25 @@ export function apply3dGroundDepthToMap(map: MapLibreLike & { getStyle?: () => {
     map.setLayoutProperty("roads-label", "text-rotation-alignment", "map");
   }
 
-  const ids = map.getStyle?.()?.layers?.map((l) => l.id) ?? [];
-  const anchor = LAYERS_ABOVE_BUILDINGS_3D.find((id) => ids.includes(id));
+  const ids = () => map.getStyle?.()?.layers?.map((l) => l.id) ?? [];
+  const anchor = LAYERS_ABOVE_BUILDINGS_3D.find((id) => ids().includes(id));
   if (!anchor) return;
 
-  const bIdx = ids.indexOf("buildings-3d");
-  const anchorIdx = ids.indexOf(anchor);
-  if (bIdx < 0 || bIdx === anchorIdx - 1) return;
+  // Facade stack directly under the first label layer, in order.
+  for (const id of BUILDING_FACADE_LAYERS) {
+    if (map.getLayer(id)) moveLayer(id, anchor);
+  }
 
-  map.moveLayer("buildings-3d", anchor);
+  for (const id of LAYERS_ON_BUILDINGS_3D) {
+    if (map.getLayer(id)) moveLayer(id, anchor);
+  }
 
-  const refreshed = map.getStyle?.()?.layers?.map((l) => l.id) ?? [];
-  const bIdx2 = refreshed.indexOf("buildings-3d");
-  for (const roadId of ROAD_GROUND_LAYER_IDS) {
-    if (!refreshed.includes(roadId)) continue;
-    if (refreshed.indexOf(roadId) > bIdx2) {
-      map.moveLayer(roadId, "buildings-3d");
+  // Any ground layer that ended up above the stack goes back under it.
+  const bottom = BUILDING_FACADE_LAYERS.find((id) => map.getLayer(id))!;
+  for (const groundId of ROAD_GROUND_LAYER_IDS) {
+    const current = ids();
+    if (current.includes(groundId) && current.indexOf(groundId) > current.indexOf(bottom)) {
+      moveLayer(groundId, bottom);
     }
   }
 }
@@ -180,9 +203,9 @@ export function applyPresetToMap(
   if (!def) return;
   const skip = new Set(opts?.skipLayers ?? []);
   map.setLight(def.light);
-  if (typeof map.setFog === "function") {
-    map.setFog(def.fog ?? null);
-  }
+  // Renderers older than maplibre-gl 5 have no sky; the rest of the preset still applies.
+  if (typeof map.setSky === "function") map.setSky(def.sky ?? null);
+  ensureStarfieldOnMap(map as StarfieldHost, def.stars ?? 0);
   for (const [id, paint] of Object.entries(def.layers)) {
     if (skip.has(id) || !map.getLayer(id)) continue;
     for (const [prop, val] of Object.entries(paint)) map.setPaintProperty(id, prop, val);

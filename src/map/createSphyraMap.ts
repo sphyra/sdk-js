@@ -21,6 +21,12 @@ export interface CreateSphyraMapOptions {
   bearing?: number;
   pitch?: number; // default: pitch from the mode table
   /**
+   * How far the camera may tilt. Default 85, the same as Mapbox Standard — MapLibre's own default
+   * of 60 stops short of the horizon, so the themed sky never comes into view when a user drags the
+   * compass up.
+   */
+  maxPitch?: number;
+  /**
    * Rewrite request URLs before the SDK's own signing transform runs (composed, not replaced).
    * Use it to send the API's absolute signed URLs same-origin — e.g. a browser demo behind a
    * dev proxy rewrites them to `window.location.origin` so they avoid CORS. Return `undefined`
@@ -48,6 +54,9 @@ export interface SphyraMapHandle {
 }
 
 const YEREVAN: [number, number] = [44.5, 40.18];
+
+/** Mapbox Standard tilts to 85°; MapLibre stops at 60° unless told, which hides the sky. */
+const MAX_PITCH = 85;
 
 /**
  * Build a configured maplibre-gl Map over the signed Sphyra style. Fetches the style once
@@ -86,7 +95,9 @@ export async function createSphyraMap(
   const userTransform = options.transformRequest;
   const transformRequest: maplibregl.RequestTransformFunction = (url, resourceType) => {
     // Let the consumer rewrite first (e.g. a same-origin proxy rewrite), then sign.
-    const rewritten = userTransform?.(url, resourceType);
+    // maplibre-gl 5 allows an async transform; we only compose synchronous ones.
+    const result = userTransform?.(url, resourceType);
+    const rewritten = result instanceof Promise ? undefined : result;
     const nextUrl = rewritten?.url ?? url;
     if (nextUrl.startsWith(base) && !nextUrl.includes("sig=")) {
       return { ...rewritten, url: nextUrl, headers: { ...rewritten?.headers, ...authHeaders } };
@@ -101,11 +112,16 @@ export async function createSphyraMap(
     zoom: options.zoom ?? 12,
     bearing: options.bearing ?? 0,
     pitch: options.pitch ?? pitchForMode(style, mode),
+    maxPitch: options.maxPitch ?? MAX_PITCH,
     transformRequest,
     attributionControl: false,
     maplibreLogo: false,
     localIdeographFontFamily: "sans-serif",
   });
+
+  // MapLibre leaves space around the globe transparent, so without this the page shows through.
+  const spaceColor = (style as { metadata?: Record<string, unknown> }).metadata?.["sphyra:spaceColor"];
+  if (typeof spaceColor === "string") map.getContainer().style.background = spaceColor;
 
   addSphyraLogoControl(map, {
     logoUrl: options.logoUrl,

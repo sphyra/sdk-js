@@ -30,6 +30,10 @@ const config = {
   baseUrl: qs.get("baseUrl") ?? fromWindow.baseUrl ?? DEFAULTS.baseUrl,
   apiKey: qs.get("apiKey") ?? fromWindow.apiKey ?? DEFAULTS.apiKey,
 };
+const PRESET_IDS = ["dawn", "day", "dusk", "night"];
+const MODE_IDS = ["2d", "3d"];
+const qsPreset = qs.get("preset");
+const qsMode = qs.get("mode");
 
 const YEREVAN = [44.5152, 40.1872]; // [lng, lat] — MapLibre order
 const DEFAULT_ZOOM = 17;
@@ -62,14 +66,13 @@ const TOOL_TITLES = {
 
 const client = new SphyraClient({ baseUrl: config.baseUrl, apiKey: config.apiKey });
 
-const TILE_LAYERS = ["pois-circle", "buildings-fill", "roads-line", "water-fill", "landuse-fill"];
+const TILE_LAYERS = ["pois", "buildings-fill", "roads-line", "water-fill", "landuse-fill"];
 
 /** Style layer groups exposed in the Layers panel. */
 const LAYER_GROUPS = [
   { id: "roads", label: "Roads & arrows", layers: ["roads-casing", "roads-rim", "roads-line", "roads-lanes", "roads-oneway", "roads-crosswalk-base", "roads-crosswalk", "roads-label"] },
-  { id: "pois", label: "POIs", layers: ["pois-circle", "pois-icon", "pois-label"] },
-  { id: "buildings", label: "Buildings", layers: ["buildings-fill", "buildings-3d", "buildings-housenumber-label", "housenumbers-label"] },
-  { id: "trees", label: "Trees", layers: ["trees-canopy-back", "trees-canopy-mid", "trees-canopy-front"] },
+  { id: "pois", label: "POIs", layers: ["pois"] },
+  { id: "buildings", label: "Buildings", layers: ["buildings-fill", "buildings-outline", "buildings-ao", "buildings-ao-contact", "buildings-3d", "buildings-3d-roof", "buildings-housenumber-label", "housenumbers-label"] },
   { id: "landuse", label: "Parks & landuse", layers: ["landuse-fill", "landuse-label"] },
   { id: "water", label: "Water", layers: ["water-fill", "water-label"] },
   { id: "places", label: "Place names", layers: ["places-label"] },
@@ -127,8 +130,8 @@ function fillLanguageSelect(codes) {
 const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]));
 
 let activeService = "inspect";
-let activePreset = "day";
-let mode = "3d";
+let activePreset = PRESET_IDS.includes(qsPreset) ? qsPreset : "day";
+let mode = MODE_IDS.includes(qsMode) ? qsMode : "3d";
 let directionsCtrl = null;
 /** @type {string | null} */
 let staticPreviewUrl = null;
@@ -322,6 +325,20 @@ function addDemoLayers(map) {
 /** @type {import("@sphyra/js").SphyraMarkerHandle[]} */
 const demoMarkers = [];
 
+function syncPresetChips() {
+  if (!presetPicker) return;
+  for (const el of presetPicker.querySelectorAll("[data-preset]")) {
+    const on = el.dataset.preset === activePreset;
+    el.classList.toggle("active", on);
+    el.setAttribute("aria-checked", String(on));
+  }
+}
+
+function syncModeButton() {
+  if (modeLabel) modeLabel.textContent = mode.toUpperCase();
+  modeBtn?.setAttribute("aria-pressed", String(mode === "3d"));
+}
+
 function wirePresetPicker(handle) {
   presetPicker?.addEventListener("click", (ev) => {
     const btn = ev.target.closest("[data-preset]");
@@ -334,6 +351,7 @@ function wirePresetPicker(handle) {
       el.setAttribute("aria-checked", String(on));
     }
     handle.setPreset(preset);
+    syncPresetChips();
   });
 }
 
@@ -549,17 +567,8 @@ async function init() {
         wireLayerToggles(map);
         wireServiceActions(map);
         window.__SPHYRA_DEMO_MAP = map;
+        window.__SPHYRA_DEMO_HANDLE = handle;
         window.__SPHYRA_DEMO_READY = true;
-        window.__SPHYRA_COUNT_TREES_NEAR = (lng, lat, radiusDeg) => {
-          const feats = map.querySourceFeatures("sphyra_trees", { sourceLayer: "trees" });
-          let n = 0;
-          for (const f of feats) {
-            if (f.geometry?.type !== "Point") continue;
-            const [flng, flat] = f.geometry.coordinates;
-            if (Math.abs(flng - lng) < radiusDeg && Math.abs(flat - lat) < radiusDeg) n++;
-          }
-          return n;
-        };
       },
     });
   } catch (err) {
@@ -567,19 +576,21 @@ async function init() {
     return;
   }
   const map = handle.map;
+  window.__SPHYRA_DEMO_HANDLE = handle;
 
   addNavigationControl(map);
   const geolocateCtrl = addGeolocateControl(map);
   addScaleControl(map);
   flyToUserLocation(map, geolocateCtrl);
 
+  syncPresetChips();
+  syncModeButton();
   wirePresetPicker(handle);
 
   modeBtn.addEventListener("click", () => {
     mode = mode === "3d" ? "2d" : "3d";
     handle.setMode(mode);
-    if (modeLabel) modeLabel.textContent = mode.toUpperCase();
-    modeBtn.setAttribute("aria-pressed", String(mode === "3d"));
+    syncModeButton();
   });
 
   fillLanguageSelect(handle.getLanguages());

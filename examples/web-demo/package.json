@@ -1,6 +1,7 @@
 {
   "name": "@sphyra/web-demo",
   "version": "0.0.0",
+  "packageManager": "pnpm@10.33.0",
   "private": true,
   "type": "module",
   "description": "Local-only browser demo for @sphyra/js (maplibre-gl-js). Not published.",
@@ -9,11 +10,11 @@
     "dev": "vite",
     "test": "node --test",
     "test:headless": "node --test headless.test.mjs",
-    "test:visual": "node --test visual-park.test.mjs visual-nzhdeh.test.mjs"
+    "test:visual": "node --test visual-preset.test.mjs visual-runtime.test.mjs"
   },
   "dependencies": {
     "@sphyra/js": "file:../..",
-    "maplibre-gl": "^4.7.1"
+    "maplibre-gl": "5.24.0"
   },
   "devDependencies": {
     "playwright": "^1.48.0",
